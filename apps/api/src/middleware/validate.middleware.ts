@@ -13,7 +13,8 @@ export function validateBody(schema: ZodSchema) {
           field: e.path.join('.'),
           message: e.message,
         }));
-        next(new AppError('BAD_REQUEST_PAYLOAD', 'Request validation failed', 400, details));
+        const detailedMessage = details.map((d) => d.message).join('. ');
+        next(new AppError('BAD_REQUEST_PAYLOAD', detailedMessage || 'Request validation failed', 400, details));
       } else {
         next(error);
       }

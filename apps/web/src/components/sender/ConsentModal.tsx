@@ -53,10 +53,22 @@ export function ConsentModal({
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                Automatic Expiry ({durationMinutes} minutes)
+                {durationMinutes === 0
+                  ? 'Continuous Sharing (Until Manually Stopped)'
+                  : `Automatic Expiry (${
+                      durationMinutes >= 60
+                        ? `${(durationMinutes / 60).toFixed(durationMinutes % 60 === 0 ? 0 : 1)} hours`
+                        : `${durationMinutes} minutes`
+                    })`}
               </h4>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Sharing terminates automatically after {durationMinutes} minutes. All coordinate data is permanently deleted from servers.
+                {durationMinutes === 0
+                  ? 'Sharing remains live continuously until you press "Stop Sharing". When stopped, all data is purged immediately.'
+                  : `Sharing terminates automatically after ${
+                      durationMinutes >= 60
+                        ? `${(durationMinutes / 60).toFixed(durationMinutes % 60 === 0 ? 0 : 1)} hours`
+                        : `${durationMinutes} minutes`
+                    }. All coordinate data is permanently deleted.`}
               </p>
             </div>
           </div>

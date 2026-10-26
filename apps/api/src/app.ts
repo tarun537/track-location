@@ -7,6 +7,28 @@ import { errorHandler } from './middleware/error.middleware.js';
 import { generalApiLimiter } from './middleware/rateLimiter.middleware.js';
 import { AppError } from './utils/errors.js';
 
+export function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  if (
+    origin === env.CLIENT_ORIGIN ||
+    origin === 'http://localhost:5173' ||
+    origin === 'http://127.0.0.1:5173'
+  ) {
+    return true;
+  }
+  // In development, permit local network IPs (e.g. 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+  if (env.NODE_ENV !== 'production') {
+    if (
+      /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/.test(
+        origin
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function createApp(): Express {
   const app = express();
 
@@ -49,7 +71,13 @@ export function createApp(): Express {
   // 4. Strict CORS
   app.use(
     cors({
-      origin: [env.CLIENT_ORIGIN, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+      origin: (requestOrigin, callback) => {
+        if (isAllowedOrigin(requestOrigin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${requestOrigin} not allowed by CORS`));
+        }
+      },
       methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Viewer-Key'],
       credentials: true,

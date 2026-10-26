@@ -1,10 +1,16 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+// Attempt to load .env from apps/api/.env or current working directory
+dotenv.config({ path: path.resolve(currentDir, '../../.env') });
 dotenv.config();
 
 const EnvironmentSchema = z.object({
   PORT: z.coerce.number().default(5000),
+  HOST: z.string().default('0.0.0.0'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   API_URL: z.string().default('http://localhost:5000'),
   CLIENT_ORIGIN: z.string().default('http://localhost:5173'),

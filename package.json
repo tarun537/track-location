@@ -6,12 +6,15 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "node scripts/dev.mjs",
     "dev:web": "npm --workspace=apps/web run dev",
-    "build:web": "npm --workspace=apps/web run build",
-    "lint:web": "npm --workspace=apps/web run lint",
-    "test:web": "npm --workspace=apps/web run test",
     "dev:api": "npm --workspace=apps/api run dev",
+    "build": "npm run build:api && npm run build:web",
+    "build:web": "npm --workspace=apps/web run build",
     "build:api": "npm --workspace=apps/api run build",
+    "lint:web": "npm --workspace=apps/web run lint",
+    "test": "npm run test:api && npm run test:web",
+    "test:web": "npm --workspace=apps/web run test",
     "test:api": "npm --workspace=apps/api run test",
     "start:api": "npm --workspace=apps/api run start"
   }

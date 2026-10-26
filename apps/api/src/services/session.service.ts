@@ -40,8 +40,12 @@ export class SessionService {
     const senderTokenHash = CryptoService.hashToken(senderToken);
     const viewerTokenHash = CryptoService.hashToken(viewerToken);
 
-    const durationMinutes = input.durationMinutes || 30;
-    const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+    const durationMinutes = input.durationMinutes ?? 30;
+    // 0 minutes designates an indefinite session (until stopped manually); expire after 365 days in MongoDB
+    const expiresAt =
+      durationMinutes === 0
+        ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + durationMinutes * 60 * 1000);
 
     const passcodeHash = input.passcode ? CryptoService.hashPasscode(input.passcode) : null;
 

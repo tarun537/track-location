@@ -4,8 +4,9 @@ export const CreateSessionSchema = z.object({
   durationMinutes: z
     .number({ invalid_type_error: 'durationMinutes must be a number' })
     .int('durationMinutes must be an integer')
-    .min(5, 'Minimum duration is 5 minutes')
-    .max(480, 'Maximum duration is 480 minutes (8 hours)')
+    .refine((val) => val === 0 || (val >= 5 && val <= 525600), {
+      message: 'Minimum duration is 5 minutes (or 0 for until manually stopped)',
+    })
     .default(30),
   title: z
     .string()

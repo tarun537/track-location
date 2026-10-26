@@ -5,7 +5,22 @@ import {
   SessionPublicMetadata,
 } from '@/types/session.types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+function getApiBaseUrl(): string {
+  if (import.meta.env.VITE_API_URL && !import.meta.env.VITE_API_URL.includes('localhost')) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return `http://${window.location.hostname}:5000/api/v1`;
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiClient {
   private baseUrl: string;
@@ -29,9 +44,25 @@ class ApiClient {
     const data: ApiResponse<T> = await response.json();
 
     if (!response.ok || !data.success) {
-      const errorMessage =
+      let errorMessage =
         (!data.success && data.error?.message) ||
         `HTTP Error ${response.status}: ${response.statusText}`;
+
+      // Surface validation details if present
+      if (
+        !data.success &&
+        data.error?.details &&
+        Array.isArray(data.error.details) &&
+        data.error.details.length > 0
+      ) {
+        const detailTexts = data.error.details
+          .map((d: { message?: string }) => d.message)
+          .filter(Boolean);
+        if (detailTexts.length > 0) {
+          errorMessage = detailTexts.join('. ');
+        }
+      }
+
       const error = new Error(errorMessage);
       (error as unknown as { code?: string; statusCode?: number }).statusCode = response.status;
       (error as unknown as { code?: string; statusCode?: number }).code =

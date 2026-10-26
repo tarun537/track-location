@@ -25,6 +25,12 @@ export function BroadcastingBar({
 }: BroadcastingBarProps) {
   // Dynamic color shift for countdown timer: Green -> Amber -> Red
   const getTimerStyles = () => {
+    if (formattedTimeRemaining.includes('∞') || formattedTimeRemaining.includes('Stopped')) {
+      return {
+        badge: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-900',
+        icon: 'text-blue-600',
+      };
+    }
     if (percentageRemaining <= 10) {
       return {
         badge: 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900 animate-pulse',

@@ -2,10 +2,26 @@ import { io, Socket } from 'socket.io-client';
 import { ILocationSnapshot } from '@/types/location.types';
 import { SessionStatus } from '@/types/session.types';
 
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_API_URL?.replace(/\/api(\/v1)?$/, '') ||
-  'http://localhost:5000';
+function getSocketUrl(): string {
+  if (import.meta.env.VITE_SOCKET_URL && !import.meta.env.VITE_SOCKET_URL.includes('localhost')) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1'
+  ) {
+    return `http://${window.location.hostname}:5000`;
+  }
+  return (
+    import.meta.env.VITE_SOCKET_URL ||
+    import.meta.env.VITE_API_URL?.replace(/\/api(\/v1)?$/, '') ||
+    'http://localhost:5000'
+  );
+}
+
+const SOCKET_URL = getSocketUrl();
 
 export interface ServerToClientEvents {
   'session:location_broadcast': (location: ILocationSnapshot) => void;

@@ -15,10 +15,10 @@ export function registerSessionHandlers(io: Server, socket: Socket) {
   // 1. Join isolated session room
   socket.join(roomName);
 
-  // Arm real-time expiration timer for the room if not already armed
-  if (!sessionExpiryTimers.has(sessionId) && sessionDoc?.expiresAt) {
+  // Arm real-time expiration timer for the room if not already armed (only for timed sessions)
+  if (!sessionExpiryTimers.has(sessionId) && sessionDoc?.expiresAt && sessionDoc.durationMinutes > 0) {
     const timeUntilExpiry = new Date(sessionDoc.expiresAt).getTime() - Date.now();
-    if (timeUntilExpiry > 0) {
+    if (timeUntilExpiry > 0 && timeUntilExpiry <= 2147483647) {
       const timer = setTimeout(async () => {
         sessionExpiryTimers.delete(sessionId);
         try {
