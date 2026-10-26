@@ -294,18 +294,18 @@ export function CreatePage() {
               </div>
             </div>
 
-            {/* Optional Title */}
+            {/* Optional Title or Display Name */}
             <div className="space-y-1">
               <Input
-                label="Session Label (Optional)"
+                label="Display Name or Activity (Optional)"
                 id="session-title"
-                placeholder="e.g. Walking home from Metro, Cycling in Park"
+                placeholder="e.g. Alex, Walking home, Cycling"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={60}
               />
               <p className="text-[11px] text-gray-400">
-                Shown to recipients so they know what you are doing.
+                Shown to authorized recipients on the live tracking map.
               </p>
             </div>
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Activity, Gauge, Compass, Clock, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { ILocationSnapshot } from '@/types/location.types';
 import { formatRelativeTime, headingToCardinal, formatSpeedKmH } from '@/lib/geoMath';
+import { useSessionCountdown } from '@/hooks/useSessionCountdown';
 
 export interface ViewerStatusCardProps {
   location?: ILocationSnapshot | null;
@@ -18,6 +19,10 @@ export function ViewerStatusCard({
 }: ViewerStatusCardProps) {
   const isStale = status === 'disconnected_stale';
   const isPaused = status === 'paused';
+
+  // Live session countdown
+  const { formattedTime: timeRemaining, percentageRemaining, isExpired: sessionHasExpired } =
+    useSessionCountdown(expiresAt);
 
   // Check if latest location coordinate timestamp is older than 30 seconds
   const [isOlderThan30s, setIsOlderThan30s] = useState(false);
@@ -40,11 +45,16 @@ export function ViewerStatusCard({
   }, [location?.timestamp]);
 
   return (
-    <div className="absolute top-4 left-4 right-4 sm:left-6 sm:w-80 sm:right-auto z-[1000] rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95 transition-all">
+    <div
+      role="region"
+      aria-label="Live Tracking Status and Telemetry"
+      aria-live="polite"
+      className="absolute top-3 left-3 right-3 sm:top-4 sm:left-6 sm:w-84 sm:right-auto z-[1000] rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95 transition-all"
+    >
       {/* Session Title & Connection Status */}
       <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2">
-          <span className="relative flex h-2.5 w-2.5">
+          <span className="relative flex h-2.5 w-2.5" role="status" aria-label={`Connection status: ${status}`}>
             {status === 'active' ? (
               <>
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -54,7 +64,7 @@ export function ViewerStatusCard({
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
             )}
           </span>
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[180px]">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[170px]">
             {title || 'Live Sharing Session'}
           </h2>
         </div>
@@ -132,14 +142,24 @@ export function ViewerStatusCard({
         </div>
       )}
 
-      {/* Last Update & Expiry Footer */}
+      {/* Last Update & Expiry Footer with Live Countdown */}
       <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 text-[11px] text-gray-400 dark:border-gray-800">
         <div className="flex items-center gap-1">
           <Clock className="h-3 w-3" />
           <span>Updated {location ? formatRelativeTime(location.timestamp) : 'never'}</span>
         </div>
-        <div>
-          Expires {new Date(expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <div
+          className={`font-mono font-medium ${
+            sessionHasExpired
+              ? 'text-red-500 font-semibold'
+              : percentageRemaining <= 10
+                ? 'text-red-500 font-semibold animate-pulse'
+                : percentageRemaining <= 30
+                  ? 'text-amber-500 font-semibold'
+                  : 'text-gray-500 dark:text-gray-400'
+          }`}
+        >
+          {sessionHasExpired ? 'Expired' : `${timeRemaining} left`}
         </div>
       </div>
     </div>
