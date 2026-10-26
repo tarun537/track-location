@@ -3,7 +3,7 @@
 > **Living Project Document**  
 > **Product Name:** Locato  
 > **Current Phase:** All 8 Phases Complete — Production Ready  
-> **Overall Status:** Phases 1 through 8 Completed & Verified (All 24 Tests Passing)  
+> **Overall Status:** Phases 1 through 8 Completed & Verified (All 34 Tests Passing)  
 > **Last Updated:** 2026-10-26  
 
 ---
@@ -376,14 +376,33 @@ locato/
 
 ## 11. Phase 8 Details: Production Deployment
 
-### 11.1 Deliverables
-- [x] Authored [`docs/DEPLOYMENT.md`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/docs/DEPLOYMENT.md): Step-by-step production runbook for Vercel, Render, and MongoDB Atlas.
-- [x] Verified monorepo build scripts (`npm run build:web`, `npm run build:api`, `npm run start:api`).
-- [x] Created `apps/web/vercel.json` for client-side routing.
-- [x] Validated production environment variables and security configurations.
-- [x] Verified two-device real-time sharing protocol.
+### 11.1 Key Achievements & Verifications
+- [x] **Production Host Binding:** Updated `apps/api/src/server.ts` to bind explicitly to `0.0.0.0` on `env.PORT` for Render container compatibility.
+- [x] **No-Mock Enforcement:** Completely removed `mockSessionService` fallback paths from `apps/web/src/pages/CreatePage.tsx` and `apps/web/src/pages/TrackPage.tsx`. Mock services are strictly isolated to standalone unit tests.
+- [x] **Socket.IO Host Derivation:** Enhanced `apps/web/src/services/socketClient.ts` to support explicit `VITE_SOCKET_URL` with automatic protocol/host fallback to `VITE_API_URL`.
+- [x] **Vercel SPA Routing Configuration:** Created `apps/web/vercel.json` with wildcard rewrite to `/index.html` ensuring deep links (`/v/:sessionId`, `/create`) resolve without 404s.
+- [x] **Frontend Environment Configuration:** Created `apps/web/.env.example` documenting `VITE_API_URL` and `VITE_SOCKET_URL` alongside explicit warnings against placing backend secrets in browser bundles.
+- [x] **Comprehensive 13-Point Deployment Runbook:** Authored [`docs/DEPLOYMENT.md`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/docs/DEPLOYMENT.md) covering:
+  1. GitHub repository preparation and secret hygiene.
+  2. MongoDB Atlas cluster setup, least-privilege DB user (`readWrite` on `locato`), dynamic network access, and TTL indexes.
+  3. Render Web Service creation (`locato-api`), Node runtime, monorepo build/start commands, and health check.
+  4. Complete backend environment variables table (`NODE_ENV`, `PORT`, `API_URL`, `CLIENT_ORIGIN`, `MONGODB_URI`, `TOKEN_SALT`, `LOG_LEVEL`).
+  5. Vercel frontend deployment with `apps/web` root directory and Vite preset.
+  6. Frontend backend URL configuration and client bundle security rules.
+  7. Production CORS configuration on Express and Socket.IO.
+  8. API and Socket.IO connectivity tests (safe `/api/health` check and WebSocket handshake upgrade).
+  9. Two-device live-sharing verification checklist (13 physical pass/fail steps).
+  10. Custom domain configuration (Apex/CNAME DNS on Vercel and Render with auto Let's Encrypt TLS).
+  11. HTTPS verification and W3C Geolocation security mandates.
+  12. Real-time expiration, revocation kill switch, and background TTL purging verification.
+  13. Troubleshooting guide for common failures (CORS, WebSocket 502, Geolocation permissions, Insecure context, Atlas whitelist).
 
-
-
-
+### 11.2 Deliverables
+- [x] [`docs/DEPLOYMENT.md`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/docs/DEPLOYMENT.md)
+- [x] [`apps/web/vercel.json`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/web/vercel.json)
+- [x] [`apps/web/.env.example`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/web/.env.example)
+- [x] [`apps/api/src/server.ts`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/api/src/server.ts)
+- [x] [`apps/web/src/pages/CreatePage.tsx`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/web/src/pages/CreatePage.tsx)
+- [x] [`apps/web/src/pages/TrackPage.tsx`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/web/src/pages/TrackPage.tsx)
+- [x] [`apps/web/src/services/socketClient.ts`](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/web/src/services/socketClient.ts)
 

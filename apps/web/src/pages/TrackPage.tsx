@@ -10,7 +10,6 @@ import {
   PasscodeDialog,
 } from '@/components/viewer/StateCards';
 import { apiClient } from '@/services/apiClient';
-import { mockSessionService } from '@/services/mockSessionService';
 import { createViewerSocket, LocatoSocket } from '@/services/socketClient';
 import { SessionPublicMetadata } from '@/types/session.types';
 import { ILocationSnapshot } from '@/types/location.types';
@@ -62,13 +61,7 @@ export function TrackPage() {
 
     async function fetchSession() {
       try {
-        let meta: SessionPublicMetadata;
-        try {
-          meta = await apiClient.getSessionMetadata(sessionId!, viewerKey);
-        } catch {
-          // If backend is offline during isolated UI development, use mock service
-          meta = await mockSessionService.getSessionMetadata(sessionId!);
-        }
+        const meta = await apiClient.getSessionMetadata(sessionId!, viewerKey);
 
         if (!isMounted) return;
 

@@ -18,7 +18,6 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useSessionCountdown } from '@/hooks/useSessionCountdown';
 import { apiClient } from '@/services/apiClient';
-import { mockSessionService } from '@/services/mockSessionService';
 import { createSenderSocket, LocatoSocket } from '@/services/socketClient';
 import { SessionCreatedResult } from '@/types/session.types';
 
@@ -119,20 +118,11 @@ export function CreatePage() {
     setCreationError(null);
 
     try {
-      let sessionData: SessionCreatedResult;
-      try {
-        sessionData = await apiClient.createSession({
-          durationMinutes,
-          title: title.trim() || undefined,
-          passcode: requirePasscode && passcode.trim() ? passcode.trim() : undefined,
-        });
-      } catch {
-        sessionData = await mockSessionService.createSession({
-          durationMinutes,
-          title: title.trim() || undefined,
-          passcode: requirePasscode && passcode.trim() ? passcode.trim() : undefined,
-        });
-      }
+      const sessionData = await apiClient.createSession({
+        durationMinutes,
+        title: title.trim() || undefined,
+        passcode: requirePasscode && passcode.trim() ? passcode.trim() : undefined,
+      });
 
       setActiveSession(sessionData);
 
@@ -168,7 +158,7 @@ export function CreatePage() {
       try {
         await apiClient.stopSession(activeSession.sessionId, activeSession.senderToken);
       } catch {
-        await mockSessionService.stopSession(activeSession.sessionId);
+        // WebSocket termination was already emitted
       }
     } catch {
       // Continue teardown even if network failed

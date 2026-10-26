@@ -17,7 +17,7 @@ async function bootstrap() {
 
   const port = env.PORT;
 
-  server.listen(port, () => {
+  server.listen(port, '0.0.0.0', () => {
     logger.info(`Locato API & Real-Time Gateway listening on port ${port} in ${env.NODE_ENV} mode`);
     logger.info(`Allowed Client Origin: ${env.CLIENT_ORIGIN}`);
   });
