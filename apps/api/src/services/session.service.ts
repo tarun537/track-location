@@ -174,7 +174,13 @@ export class SessionService {
   static async revokeSession(session: ISessionDocument): Promise<void> {
     session.status = 'revoked';
     session.lastLocation = null; // Strict Zero-Retention guarantee
-    await session.save();
+    await Session.updateOne(
+      { _id: session._id },
+      {
+        $set: { status: 'revoked' },
+        $unset: { lastLocation: 1 },
+      }
+    );
   }
 
   /**
@@ -231,3 +237,4 @@ export class SessionService {
     };
   }
 }
+

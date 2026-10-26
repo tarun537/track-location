@@ -2,8 +2,8 @@
 
 > **Living Project Document**  
 > **Product Name:** Locato  
-> **Current Phase:** Phase 3 Completed — Ready for Phase 4 (Real-Time GPS)  
-> **Overall Status:** Phases 1, 2 & 3 Complete (All Acceptance Criteria Verified)  
+> **Current Phase:** Phase 4 Completed — Ready for Phase 5 (Secure Links & Credential Hygiene)  
+> **Overall Status:** Phases 1, 2, 3 & 4 Complete (All Acceptance Criteria Verified)  
 > **Last Updated:** 2026-10-26  
 
 ---
@@ -48,7 +48,7 @@ locato/
 | **1** | **Planning & Architecture** | Complete specifications (`docs/`), repository state audit, session lifecycle, token architecture, browser limitations. | **COMPLETED** |
 | **2** | **Frontend** | React SPA (Landing, Create Session, Viewer Map, Error states, responsive layout, shadcn/ui). | **COMPLETED** |
 | **3** | **Backend & Database** | Express API, MongoDB connection, Mongoose model with TTL, Zod validation, token hashing, rate limiters, unit/integration tests. | **COMPLETED** |
-| **4** | **Real-Time GPS** | Authenticated Socket.IO gateway, browser `watchPosition` engine, unidirectional broadcast, kill switch. | PENDING |
+| **4** | **Real-Time GPS** | Authenticated Socket.IO gateway, browser `watchPosition` engine, unidirectional broadcast, kill switch. | **COMPLETED** |
 | **5** | **Secure Links** | Unpredictable IDs, one-time secret exchange, address bar secret stripping, QR code, native share, unauthorized join tests. | PENDING |
 | **6** | **Product Polish** | Dynamic accuracy circle, marker animation, stale-location indicators, countdown, mobile UX, honest PWA limits. | PENDING |
 | **7** | **Security & QA** | Security audit (`SECURITY_AUDIT.md`), privacy review (`PRIVACY_REVIEW.md`), test report (`TEST_REPORT.md`), known limitations (`KNOWN_LIMITATIONS.md`), production readiness (`PRODUCTION_READINESS.md`). | PENDING |
@@ -212,7 +212,82 @@ locato/
 - **Full Workspace Test Suite:** 16/16 passing across `apps/web` and `apps/api`.
 
 ### 6.5 Next Phase
-- Proceed to **Phase 4 — Real-Time GPS**: Connect frontend and backend via authenticated Socket.IO for live coordinate streaming with zero recipient tracking, leaky-bucket rate limiting, and instant kill switch broadcast.
+- Proceeded to **Phase 4 — Real-Time GPS** (Completed below).
+
+---
+
+## 7. Phase 4 Details: Real-Time GPS Location Sharing
+
+### 7.1 Objectives
+1. Connect real browser GPS, backend, Socket.IO, and recipient map.
+2. Sender flow: Start tracking strictly after explicit human consent via `navigator.geolocation.watchPosition()`. Stop watch when sharing ends.
+3. Real-time communication: Typed Socket.IO events for sender/recipient authentication, room isolation (`session:${sessionId}`), coordinate streaming, pause/resume, and kill switch termination.
+4. Role authorization: Enforce that only authenticated senders can broadcast coordinates; reject viewers attempting coordinate updates.
+5. Coordinate validation & geodetic sanitization: Validate latitude (-90 to 90), longitude (-180 to 180), accuracy, timestamps. Truncate to 6 decimal places.
+6. Rate limiting: Leaky-bucket limiter on sender socket updates (<2 updates/sec).
+7. Zero recipient tracking: Recipient connects with capability token, receives live broadcasts, and never has their own location requested.
+8. Instant kill switch: Broadcast `session:status_changed: revoked` to room and purge database `lastLocation` via atomic `$unset`.
+
+### 7.2 Work Completed in Phase 4
+- [x] Implemented Socket.IO server gateway (`apps/api/src/sockets/socketServer.ts`) mounted directly onto HTTP server with CORS and buffer limits.
+- [x] Implemented handshake authentication middleware (`apps/api/src/sockets/socketAuth.middleware.ts`):
+  - Validates `sessionId` exists and is not expired or revoked.
+  - Authenticates sender using timing-safe SHA-256 hash comparison against `senderTokenHash`.
+  - Authenticates viewer using timing-safe SHA-256 hash comparison against `viewerTokenHash` (if passcode enabled).
+  - Rejects unauthorized or malformed connections with typed Socket.IO connect errors.
+- [x] Implemented location event handler (`apps/api/src/sockets/handlers/location.handler.ts`):
+  - Role enforcement: Sockets with `role !== 'sender'` attempting `sender:location_update` receive `FORBIDDEN_OPERATION` and are immediately disconnected.
+  - Leaky-bucket rate limiter: Drops excessive updates (>2/sec) and emits `RATE_LIMIT_EXCEEDED`.
+  - Zod payload validation: Validates latitude, longitude, accuracy, timestamp, heading, speed, altitude.
+  - Atomic database update: Uses `findOneAndUpdate` with `{ status: { $nin: ['revoked', 'expired'] }, expiresAt: { $gt: new Date() } }` to eliminate revocation race conditions.
+  - Unidirectional broadcast: Emits sanitized `session:location_broadcast` to `session:${sessionId}` room.
+- [x] Implemented session room handler (`apps/api/src/sockets/handlers/session.handler.ts`):
+  - Room isolation (`session:${sessionId}`).
+  - Dynamic viewer count tracking and room notification.
+  - Sender 60-second disconnect grace timer before emitting `session:sender_disconnected`.
+  - Sender reconnect notification (`session:sender_reconnected`).
+  - Pause / resume state broadcasting.
+  - Kill switch (`sender:terminate`): Triggers `SessionService.revokeSession` (atomic `$unset: { lastLocation: 1 }`), broadcasts `session:status_changed: revoked`, and disconnects all room sockets.
+- [x] Integrated frontend sender flow (`apps/web/src/pages/CreatePage.tsx`):
+  - Connects to Socket.IO gateway upon session creation.
+  - Listens to GPS changes from `useGeolocation` and emits `sender:location_update`.
+  - Displays live viewer count badge.
+  - Emits `sender:terminate` on user confirmation.
+- [x] Integrated frontend recipient flow (`apps/web/src/pages/TrackPage.tsx`):
+  - Strips URL hash capability token from browser address bar on mount.
+  - Authenticates to Socket.IO gateway as viewer.
+  - Listens to `session:location_broadcast` and updates map marker/accuracy ring smoothly.
+  - Listens to disconnect, reconnect, pause, and revoke events.
+  - Strictly zero recipient geolocation queries.
+- [x] Created comprehensive real-time automated test suite (`apps/api/tests/socket.test.ts`):
+  - Handshake authentication and real-time GPS coordinate streaming.
+  - Rejection of invalid credentials on handshake.
+  - Strict blocking and disconnection of malicious viewers attempting coordinate updates.
+  - Real-time kill switch execution and instantaneous database location purge.
+
+### 7.3 Acceptance Criteria Verification (Phase 4)
+- [x] **Browser GPS captured accurately:** Uses `navigator.geolocation.watchPosition` with high accuracy and error fallbacks.
+- [x] **Location updates streamed in real time:** Verified across authenticated WebSocket transport.
+- [x] **Recipient map updates smoothly:** Leaflet marker and accuracy circle update without jarring page reloads.
+- [x] **Sender authorization enforced on real-time channel:** Sockets without valid sender tokens cannot broadcast coordinates.
+- [x] **Coordinates validated and sanitized:** Zod schema enforces bounds; 6-decimal truncation applied.
+- [x] **Recipient location never collected:** Zero calls to geolocation API on viewer route.
+- [x] **Stop sharing terminates updates and notifies recipient:** Immediate kill switch purges coordinates and broadcasts revoked status.
+- [x] **Tests pass:**
+  - `apps/api/tests/socket.test.ts`: 4/4 tests passed.
+  - `apps/api/tests/session.test.ts`: 12/12 tests passed.
+  - Full API suite: 16/16 tests passed.
+  - Full Web suite: 4/4 tests passed.
+  - TypeScript compilation: 0 errors across all workspaces.
+
+### 7.4 Test & Build Results
+- **API Tests:** 16/16 passed in 3.99s ([tests/socket.test.ts](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/api/tests/socket.test.ts) & [tests/session.test.ts](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/api/tests/session.test.ts)).
+- **Web Tests:** 4/4 passed in 206ms ([src/tests/geoMath.test.ts](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/web/src/tests/geoMath.test.ts)).
+- **Web Production Build:** Vite build succeeded in 21.9s with 0 errors.
+
+### 7.5 Next Phase
+- Proceed to **Phase 5 — Secure Links and Credential Hygiene**: Unpredictable URLs, address bar secret stripping verification, native sharing, QR code rendering, and unauthorized room join hardening.
+
 
 
 

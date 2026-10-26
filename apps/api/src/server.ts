@@ -2,6 +2,7 @@ import http from 'node:http';
 import { createApp } from './app.js';
 import { env } from './config/environment.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
+import { setupSocketServer } from './sockets/socketServer.js';
 import { logger } from './utils/logger.js';
 
 async function bootstrap() {
@@ -11,16 +12,20 @@ async function bootstrap() {
   const app = createApp();
   const server = http.createServer(app);
 
+  // Initialize Socket.IO Real-Time Gateway
+  const io = setupSocketServer(server);
+
   const port = env.PORT;
 
   server.listen(port, () => {
-    logger.info(`Locato API Server listening on port ${port} in ${env.NODE_ENV} mode`);
+    logger.info(`Locato API & Real-Time Gateway listening on port ${port} in ${env.NODE_ENV} mode`);
     logger.info(`Allowed Client Origin: ${env.CLIENT_ORIGIN}`);
   });
 
   // Graceful Shutdown Handling
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received: closing HTTP server and database connections`);
+    io.close();
     server.close(async () => {
       logger.info('HTTP server closed');
       await disconnectDatabase();

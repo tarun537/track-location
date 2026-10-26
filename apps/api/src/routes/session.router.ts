@@ -93,3 +93,4 @@ sessionRouter.patch(
   validateBody(ExtendSessionSchema),
   SessionController.extend
 );
+

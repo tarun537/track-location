@@ -166,3 +166,4 @@ SessionSchema.methods.isActive = function (): boolean {
 
 export const Session: Model<ISessionDocument> =
   mongoose.models.Session || mongoose.model<ISessionDocument>('Session', SessionSchema);
+

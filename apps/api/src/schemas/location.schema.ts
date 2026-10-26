@@ -35,3 +35,4 @@ export const LocationUpdateSchema = z.object({
 });
 
 export type LocationUpdateInput = z.infer<typeof LocationUpdateSchema>;
+

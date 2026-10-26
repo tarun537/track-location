@@ -14,3 +14,4 @@ export function getHealthCheck(_req: Request, res: Response): void {
     },
   });
 }
+

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Clock,
   Shield,
@@ -19,6 +19,7 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { useSessionCountdown } from '@/hooks/useSessionCountdown';
 import { apiClient } from '@/services/apiClient';
 import { mockSessionService } from '@/services/mockSessionService';
+import { createSenderSocket, LocatoSocket } from '@/services/socketClient';
 import { SessionCreatedResult } from '@/types/session.types';
 
 const DURATION_PRESETS = [
@@ -43,9 +44,11 @@ export function CreatePage() {
   const [isStoppingSession, setIsStoppingSession] = useState(false);
   const [creationError, setCreationError] = useState<string | null>(null);
 
-  // Active Session State
+  // Active Session & Real-time State
   const [activeSession, setActiveSession] = useState<SessionCreatedResult | null>(null);
+  const [viewerCount, setViewerCount] = useState<number>(0);
   const [isSharingEnded, setIsSharingEnded] = useState(false);
+  const socketRef = useRef<LocatoSocket | null>(null);
 
   // Geolocation & Wake Lock Hooks
   // Note: startTracking is NEVER called on mount! It is only triggered after user confirms consent!
@@ -70,20 +73,52 @@ export function CreatePage() {
     }
   );
 
-  // STEP 1: User clicks "Create & Share Location" -> Opens Consent Pre-Prompt
+  // STEP 1: Connect WebSocket when activeSession is initialized
+  useEffect(() => {
+    if (!activeSession) return;
+
+    const socket = createSenderSocket(activeSession.sessionId, activeSession.senderToken);
+    socketRef.current = socket;
+
+    socket.on('session:viewer_count', (data) => {
+      setViewerCount(data.viewerCount);
+    });
+
+    socket.on('session:status_changed', (data) => {
+      if (data.status === 'revoked' || data.status === 'expired') {
+        stopTracking();
+        releaseLock();
+        setIsSharingEnded(true);
+        setActiveSession(null);
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [activeSession, stopTracking, releaseLock]);
+
+  // STEP 2: Stream live coordinates via WebSocket whenever device GPS acquires a new fix
+  useEffect(() => {
+    if (socketRef.current && coordinates) {
+      socketRef.current.emit('sender:location_update', coordinates);
+    }
+  }, [coordinates]);
+
+  // STEP 3: User clicks "Create & Share Location" -> Opens Consent Pre-Prompt
   const handleInitiateSharing = () => {
     setCreationError(null);
     setIsConsentModalOpen(true);
   };
 
-  // STEP 2: User confirms consent -> Creates backend session & requests browser GPS
+  // STEP 4: User confirms consent -> Creates backend session & starts GPS
   const handleConfirmConsent = async () => {
     setIsConsentModalOpen(false);
     setIsCreatingSession(true);
     setCreationError(null);
 
     try {
-      // Create session on server (or mock service if in isolated test mode)
       let sessionData: SessionCreatedResult;
       try {
         sessionData = await apiClient.createSession({
@@ -92,7 +127,6 @@ export function CreatePage() {
           passcode: requirePasscode && passcode.trim() ? passcode.trim() : undefined,
         });
       } catch {
-        // Fallback to isolated development mock service if backend is offline during UI testing
         sessionData = await mockSessionService.createSession({
           durationMinutes,
           title: title.trim() || undefined,
@@ -119,12 +153,18 @@ export function CreatePage() {
     }
   };
 
-  // STEP 3: User triggers Instant Kill Switch
+  // STEP 5: User triggers Instant Kill Switch
   const handleConfirmStopSharing = async () => {
     if (!activeSession) return;
     setIsStoppingSession(true);
 
     try {
+      // 1. Notify backend via WebSocket immediately
+      if (socketRef.current) {
+        socketRef.current.emit('sender:terminate');
+      }
+
+      // 2. Also call REST API stop endpoint for certainty
       try {
         await apiClient.stopSession(activeSession.sessionId, activeSession.senderToken);
       } catch {
@@ -175,7 +215,7 @@ export function CreatePage() {
         <div className="space-y-6">
           {/* Top Control & Metrics Bar */}
           <BroadcastingBar
-            viewerCount={1}
+            viewerCount={viewerCount}
             accuracyMeters={coordinates?.accuracy}
             formattedTimeRemaining={timeRemaining}
             isWakeLockActive={isWakeLockActive}

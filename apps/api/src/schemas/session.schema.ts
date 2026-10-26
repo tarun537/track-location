@@ -39,3 +39,4 @@ export const ExtendSessionSchema = z.object({
 export const SessionIdParamSchema = z.object({
   sessionId: z.string().min(6).max(64),
 });
+

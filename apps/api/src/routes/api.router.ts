@@ -9,3 +9,4 @@ apiRouter.get('/health', getHealthCheck);
 
 // Sessions CRUD endpoints
 apiRouter.use('/sessions', sessionRouter);
+
