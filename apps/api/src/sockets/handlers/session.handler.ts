@@ -5,6 +5,8 @@ import { logger } from '../../utils/logger.js';
 
 // Tracks active disconnect grace timers for senders (sessionId -> Timeout)
 const senderGraceTimers = new Map<string, NodeJS.Timeout>();
+// Tracks active real-time expiration timers for rooms (sessionId -> Timeout)
+const sessionExpiryTimers = new Map<string, NodeJS.Timeout>();
 
 export function registerSessionHandlers(io: Server, socket: Socket) {
   const { role, sessionId, sessionDoc } = socket.data;
@@ -12,6 +14,33 @@ export function registerSessionHandlers(io: Server, socket: Socket) {
 
   // 1. Join isolated session room
   socket.join(roomName);
+
+  // Arm real-time expiration timer for the room if not already armed
+  if (!sessionExpiryTimers.has(sessionId) && sessionDoc?.expiresAt) {
+    const timeUntilExpiry = new Date(sessionDoc.expiresAt).getTime() - Date.now();
+    if (timeUntilExpiry > 0) {
+      const timer = setTimeout(async () => {
+        sessionExpiryTimers.delete(sessionId);
+        try {
+          await Session.updateOne(
+            { sessionId },
+            { $set: { status: 'expired' }, $unset: { lastLocation: 1 } }
+          );
+          io.to(roomName).emit('session:status_changed', { status: 'expired' });
+          io.to(roomName).emit('session:expired', { expiredAt: new Date().toISOString() });
+          const roomSockets = await io.in(roomName).fetchSockets();
+          for (const s of roomSockets) {
+            s.disconnect(true);
+          }
+          logger.info({ sessionId }, 'Session expired in real time: sockets disconnected and location purged');
+        } catch (err) {
+          logger.error({ err, sessionId }, 'Error during real-time expiration handler');
+        }
+      }, timeUntilExpiry);
+
+      sessionExpiryTimers.set(sessionId, timer);
+    }
+  }
 
   // If sender reconnected, clear any pending disconnect grace timer and notify room
   if (role === 'sender') {
@@ -71,6 +100,13 @@ export function registerSessionHandlers(io: Server, socket: Socket) {
       const session = await Session.findOne({ sessionId });
       if (session) {
         await SessionService.revokeSession(session);
+      }
+
+      // Clear any pending expiry timer for this session
+      const expTimer = sessionExpiryTimers.get(sessionId);
+      if (expTimer) {
+        clearTimeout(expTimer);
+        sessionExpiryTimers.delete(sessionId);
       }
 
       // Notify all room members that session has been revoked

@@ -33,7 +33,9 @@ export class SessionService {
   static async createSession(input: CreateSessionInput): Promise<CreateSessionResult> {
     const sessionId = CryptoService.generateSessionId();
     const senderToken = CryptoService.generateSenderToken();
-    const viewerToken = CryptoService.generateViewerToken();
+    const viewerToken = input.passcode
+      ? CryptoService.deriveViewerTokenFromPasscode(sessionId, input.passcode)
+      : CryptoService.generateViewerToken();
 
     const senderTokenHash = CryptoService.hashToken(senderToken);
     const viewerTokenHash = CryptoService.hashToken(viewerToken);
@@ -61,7 +63,10 @@ export class SessionService {
     await session.save();
 
     // Construct capability URL with hash fragment (#key=...)
-    const shareUrl = `${env.CLIENT_ORIGIN}/v/${sessionId}#key=${viewerToken}`;
+    // If passcode is required, omit key from URL so recipient is prompted for PIN
+    const shareUrl = input.passcode
+      ? `${env.CLIENT_ORIGIN}/v/${sessionId}`
+      : `${env.CLIENT_ORIGIN}/v/${sessionId}#key=${viewerToken}`;
 
     return {
       sessionId,
@@ -110,16 +115,15 @@ export class SessionService {
       );
     }
 
-    // Passcode protection check
-    let isUnlocked = !session.settings.requirePasscode;
+    // Authorization check:
+    // Possession of sessionId alone does NOT authorize access to coordinates!
+    // A valid capability token matching viewerTokenHash is strictly required.
+    let isUnlocked = false;
 
-    if (session.settings.requirePasscode && viewerToken) {
-      // Validate viewer capability token if supplied
-      if (session.viewerTokenHash) {
-        const isMatch = CryptoService.verifyToken(viewerToken, session.viewerTokenHash);
-        if (isMatch) {
-          isUnlocked = true;
-        }
+    if (viewerToken && session.viewerTokenHash) {
+      const isMatch = CryptoService.verifyToken(viewerToken, session.viewerTokenHash);
+      if (isMatch) {
+        isUnlocked = true;
       }
     }
 
@@ -132,7 +136,7 @@ export class SessionService {
       requirePasscode: session.settings.requirePasscode,
       isUnlocked,
       viewerCount: session.stats.viewerCount,
-      // Omit coordinate snapshot if passcode is locked
+      // Omit coordinate snapshot if passcode is locked or viewerToken is missing/unauthorized
       lastLocation: isUnlocked ? session.lastLocation : null,
     };
   }
@@ -164,7 +168,8 @@ export class SessionService {
       throw new AppError('UNAUTHORIZED_TOKEN', 'Incorrect passcode PIN.', 401);
     }
 
-    return { verified: true };
+    const viewerToken = CryptoService.deriveViewerTokenFromPasscode(sessionId, passcode);
+    return { verified: true, viewerToken };
   }
 
   /**

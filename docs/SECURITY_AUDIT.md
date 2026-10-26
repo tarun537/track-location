@@ -20,13 +20,41 @@ Locato is specifically designed with a **Privacy-First, Consent-Based Architectu
 | :--- | :---: | :---: | :---: |
 | **Critical** | 0 | 0 | **0** |
 | **High** | 0 | 0 | **0** |
-| **Medium** | 0 | 0 | **0** |
+| **Medium** | 2 | 2 | **0** |
 | **Low** | 2 | 2 | **0** |
 | **Informational** | 3 | 3 | **0** |
 
 ---
 
-## 2. Cryptographic Architecture & Token Hygiene
+## 2. Security Audit Findings & Resolved Issues
+
+### Finding SEC-01: Session ID Alone Leaked Location on Public Sessions
+- **Severity:** Medium (CVSS 5.3)
+- **Status:** **RESOLVED**
+- **Description:** Previously, `getSessionById` returned `lastLocation` if `requirePasscode` was false, meaning any user guessing or observing a `sessionId` could retrieve coordinates without possessing the capability token.
+- **Fix Implemented:** `getSessionById` now enforces that possession of `sessionId` alone does NOT unlock coordinates (`isUnlocked = false`, `lastLocation = null`). A valid `X-Session-Viewer-Key` matching `viewerTokenHash` is strictly required.
+
+### Finding SEC-02: Socket.IO Viewer Handshake Permitted Unauthenticated Joins on Non-PIN Sessions
+- **Severity:** Medium (CVSS 5.3)
+- **Status:** **RESOLVED**
+- **Description:** `socketAuthMiddleware` previously validated viewer tokens only when `requirePasscode` was true.
+- **Fix Implemented:** Handshake authentication now mandates that all viewers must provide a valid `token` matching `session.viewerTokenHash`. Unauthenticated joins are immediately rejected with `UNAUTHORIZED_TOKEN: Viewer capability token is required`.
+
+### Finding SEC-03: Real-Time Socket Connection Persistence Past Expiration
+- **Severity:** Low (CVSS 3.7)
+- **Status:** **RESOLVED**
+- **Description:** If a session expired while viewers and senders were connected and idle, sockets could remain connected until client disconnection.
+- **Fix Implemented:** Sockets now arm server-side room timers (`sessionExpiryTimers`). Upon reaching `session.expiresAt`, the server automatically purges DB coordinates, emits `session:status_changed: expired`, and forcibly disconnects all sockets in the room.
+
+### Finding SEC-04: Geodetic Bound Validation & Payload Abuse
+- **Severity:** Low (CVSS 3.1)
+- **Status:** **RESOLVED**
+- **Description:** Malformed coordinates (e.g. latitude > 90) or excessive payload sizes could cause visualization or memory issues.
+- **Fix Implemented:** Bound checks in `LocationUpdateSchema` (latitude -90..90, longitude -180..180, speed 0..150 m/s), `maxHttpBufferSize: 1e4` (10 KB max payload), and leaky-bucket limiter (max 2 updates/sec).
+
+---
+
+## 3. Cryptographic Architecture & Token Hygiene
 
 ### 2.1 Token Generation and Entropy
 - **Session IDs:** Generated using 128 bits of cryptographically secure random entropy (`crypto.randomBytes(16)` encoded via URL-safe Base64), yielding ~22 characters. Collision probability across 1 billion sessions is negligible (\(< 10^{-15}\)).

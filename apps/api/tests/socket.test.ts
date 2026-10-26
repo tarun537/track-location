@@ -394,4 +394,92 @@ describe('Real-Time Socket.IO Location Streaming & Authorization', () => {
     expect(err.message).toContain('SESSION_REVOKED');
     reusedSocket.disconnect();
   });
+
+  it('rejects viewer socket connection without capability token (Session ID alone does not authorize WebSocket join)', async () => {
+    const session = await SessionService.createSession({ durationMinutes: 30 });
+    const { sessionId } = session;
+
+    // Attacker possesses only the public sessionId and no capability token
+    const unauthorizedViewer: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId },
+      transports: ['websocket'],
+    });
+
+    const errPromise = new Promise<Error>((resolve) => {
+      unauthorizedViewer.on('connect_error', resolve);
+    });
+
+    const err = await errPromise;
+    expect(err.message).toContain('UNAUTHORIZED_TOKEN');
+    unauthorizedViewer.disconnect();
+  });
+
+  it('rejects location updates with malformed or out-of-bounds coordinates', async () => {
+    const session = await SessionService.createSession({ durationMinutes: 30 });
+    const { sessionId, senderToken } = session;
+
+    const senderSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'sender', sessionId, token: senderToken },
+      transports: ['websocket'],
+    });
+
+    await new Promise<void>((resolve) => senderSocket.on('connect', resolve));
+
+    const errorPromise = new Promise<{ code: string; message: string }>((resolve) => {
+      senderSocket.on('session:error', resolve);
+    });
+
+    // Malformed coordinate: latitude 120.0 (exceeds 90.0 bound)
+    senderSocket.emit('sender:location_update', {
+      latitude: 120.0,
+      longitude: -74.006,
+      accuracy: 10,
+    });
+
+    const errPayload = await errorPromise;
+    expect(errPayload.code).toBe('BAD_REQUEST_PAYLOAD');
+    senderSocket.disconnect();
+  });
+
+  it('disconnects active sockets and purges location when session expires in real time', async () => {
+    // Create session expiring in 600ms
+    const session = await SessionService.createSession({ durationMinutes: 5 });
+    const { sessionId, senderToken, viewerToken } = session;
+
+    await Session.updateOne(
+      { sessionId },
+      { expiresAt: new Date(Date.now() + 600) }
+    );
+
+    const senderSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'sender', sessionId, token: senderToken },
+      transports: ['websocket'],
+    });
+
+    const viewerSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId, token: viewerToken },
+      transports: ['websocket'],
+    });
+
+    await Promise.all([
+      new Promise<void>((resolve) => senderSocket.on('connect', resolve)),
+      new Promise<void>((resolve) => viewerSocket.on('connect', resolve)),
+    ]);
+
+    const expiredPromise = new Promise<{ status: string }>((resolve) => {
+      viewerSocket.on('session:status_changed', resolve);
+    });
+
+    // Wait for the server real-time expiration timer to fire
+    const expiredData = await expiredPromise;
+    expect(expiredData.status).toBe('expired');
+
+    // Verify DB location was purged upon real-time expiration
+    const dbSession = await Session.findOne({ sessionId });
+    expect(dbSession?.status).toBe('expired');
+    expect(dbSession?.lastLocation).toBeNull();
+
+    senderSocket.disconnect();
+    viewerSocket.disconnect();
+  });
 });

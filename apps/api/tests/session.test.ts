@@ -80,20 +80,43 @@ describe('2. Session Creation & Validation', () => {
 });
 
 describe('3. Public Metadata Retrieval & Passcode Authorization', () => {
-  it('GET /api/sessions/:sessionId returns session metadata for public session', async () => {
+  it('GET /api/sessions/:sessionId requires viewer capability key to unlock coordinates (Session ID alone does not authorize)', async () => {
     const createRes = await request(app).post('/api/sessions').send({
       durationMinutes: 45,
       title: 'City Run',
     });
 
-    const sessionId = createRes.body.data.sessionId;
+    const { sessionId, viewerToken } = createRes.body.data;
 
-    const res = await request(app).get(`/api/sessions/${sessionId}`);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.sessionId).toBe(sessionId);
-    expect(res.body.data.title).toBe('City Run');
-    expect(res.body.data.isUnlocked).toBe(true);
+    // Attach a coordinate to the session document in DB to test protection
+    await Session.updateOne(
+      { sessionId },
+      {
+        lastLocation: {
+          latitude: 40.7128,
+          longitude: -74.006,
+          accuracy: 10,
+          timestamp: new Date(),
+        },
+      }
+    );
+
+    // 1. Request WITHOUT capability key (Session ID alone) -> isUnlocked: false, lastLocation: null
+    const resNoKey = await request(app).get(`/api/sessions/${sessionId}`);
+    expect(resNoKey.status).toBe(200);
+    expect(resNoKey.body.success).toBe(true);
+    expect(resNoKey.body.data.sessionId).toBe(sessionId);
+    expect(resNoKey.body.data.title).toBe('City Run');
+    expect(resNoKey.body.data.isUnlocked).toBe(false);
+    expect(resNoKey.body.data.lastLocation).toBeNull(); // Coordinates withheld!
+
+    // 2. Request WITH valid capability key -> isUnlocked: true, coordinates returned
+    const resWithKey = await request(app)
+      .get(`/api/sessions/${sessionId}`)
+      .set('X-Session-Viewer-Key', viewerToken);
+    expect(resWithKey.status).toBe(200);
+    expect(resWithKey.body.data.isUnlocked).toBe(true);
+    expect(resWithKey.body.data.lastLocation?.latitude).toBe(40.7128);
   });
 
   it('GET /api/sessions/:sessionId with passcode returns locked status and omits coordinates', async () => {
@@ -146,6 +169,7 @@ describe('3. Public Metadata Retrieval & Passcode Authorization', () => {
       .send({ passcode: '9876' });
     expect(correctRes.status).toBe(200);
     expect(correctRes.body.data.verified).toBe(true);
+    expect(correctRes.body.data.viewerToken).toMatch(/^vt_/);
   });
 });
 

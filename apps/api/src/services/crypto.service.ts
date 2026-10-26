@@ -24,6 +24,18 @@ export class CryptoService {
   }
 
   /**
+   * Deterministically derives a viewer capability token from sessionId and verified passcode.
+   * This allows authorized viewers to connect to WebSockets and access coordinates upon PIN entry.
+   */
+  static deriveViewerTokenFromPasscode(sessionId: string, passcode: string): string {
+    return `vt_${crypto
+      .createHmac('sha256', env.TOKEN_SALT)
+      .update(`${sessionId}:${passcode}`)
+      .digest('hex')
+      .slice(0, 32)}`;
+  }
+
+  /**
    * Hashes a secret token using SHA-256 with optional server-side pepper salt.
    * This is irreversible and stored in MongoDB instead of raw tokens.
    */

@@ -3,7 +3,7 @@
 > **Product Name:** Locato  
 > **Report Date:** 2026-10-26  
 > **Test Frameworks:** Vitest 3.x (Node/Backend), Vitest 5.x (React/Frontend), Supertest, MongoDB Memory Server, Socket.IO Client  
-> **Overall Test Status:** 31 / 31 Tests Passing (100% Pass Rate)  
+> **Overall Test Status:** 34 / 34 Tests Passing (100% Pass Rate)  
 
 ---
 
@@ -13,12 +13,12 @@
 ========================================================================================
 Test Suite                                  Status     Tests    Passed   Failed   Time
 ========================================================================================
-apps/api/tests/session.test.ts              PASSED        12        12        0  1.29s
-apps/api/tests/socket.test.ts               PASSED        10        10        0  2.90s
+apps/api/tests/session.test.ts              PASSED        12        12        0  1.45s
+apps/api/tests/socket.test.ts               PASSED        13        13        0  2.21s
 apps/web/src/tests/geoMath.test.ts          PASSED         4         4        0  0.01s
 apps/web/src/tests/secureLinks.test.ts      PASSED         5         5        0  0.01s
 ----------------------------------------------------------------------------------------
-Total Automated Tests Passed                PASSED        31        31        0  4.21s
+Total Automated Tests Passed                PASSED        34        34        0  3.68s
 ========================================================================================
 ```
 
@@ -57,25 +57,28 @@ Total Automated Tests Passed                PASSED        31        31        0 
 | 20 | `Rejects unauthorized viewer on passcode-protected session until verified` | Protected Sessions | **PASSED** |
 | 21 | `Permits repeated credential use for multiple authorized concurrent viewers` | Multi-Viewer | **PASSED** |
 | 22 | `Strictly denies repeated credential access after session revocation` | Security / Revocation | **PASSED** |
+| 23 | `Rejects viewer socket connection without capability token (Session ID alone does not authorize)` | Security / Auth | **PASSED** |
+| 24 | `Rejects location updates with malformed or out-of-bounds coordinates (lat > 90)` | Schema Validation | **PASSED** |
+| 25 | `Disconnects active sockets and purges location when session expires in real time` | Real-time Expiry | **PASSED** |
 
 ### 2.3 Frontend Geolocation Mathematics & Formatting (`apps/web/src/tests/geoMath.test.ts`)
 
 | # | Test Description | Category | Result |
 | :---: | :--- | :--- | :---: |
-| 23 | `Formats relative time stamps accurately (just now, Xs ago, Xm ago)` | Math / Time | **PASSED** |
-| 24 | `Converts degree headings to cardinal directions (N, NE, E, SE, S, SW, W, NW)` | Geodesy | **PASSED** |
-| 25 | `Formats GPS speed in m/s to clean km/h display` | Formatting | **PASSED** |
-| 26 | `Calculates Haversine distance between two coordinates in meters` | Geodesy | **PASSED** |
+| 26 | `Formats relative time stamps accurately (just now, Xs ago, Xm ago)` | Math / Time | **PASSED** |
+| 27 | `Converts degree headings to cardinal directions (N, NE, E, SE, S, SW, W, NW)` | Geodesy | **PASSED** |
+| 28 | `Formats GPS speed in m/s to clean km/h display` | Formatting | **PASSED** |
+| 29 | `Calculates Haversine distance between two coordinates in meters` | Geodesy | **PASSED** |
 
 ### 2.4 Secure Links & Credential Hygiene (`apps/web/src/tests/secureLinks.test.ts`)
 
 | # | Test Description | Category | Result |
 | :---: | :--- | :--- | :---: |
-| 27 | `Safely extracts viewer capability key from URL hash fragment` | RFC 3986 Hash | **PASSED** |
-| 28 | `Handles malformed or missing hash key gracefully without throwing` | Robustness | **PASSED** |
-| 29 | `Generates clean sanitized URL for address bar stripping (replaceState)` | Address Bar Hygiene | **PASSED** |
-| 30 | `Ensures QR code payload strictly contains canonical share URL without location coordinates` | Privacy / QR | **PASSED** |
-| 31 | `Verifies configurable duration presets include required choices (15m, 1h, 8h)` | UX / Expiration | **PASSED** |
+| 30 | `Safely extracts viewer capability key from URL hash fragment` | RFC 3986 Hash | **PASSED** |
+| 31 | `Handles malformed or missing hash key gracefully without throwing` | Robustness | **PASSED** |
+| 32 | `Generates clean sanitized URL for address bar stripping (replaceState)` | Address Bar Hygiene | **PASSED** |
+| 33 | `Ensures QR code payload strictly contains canonical share URL without location coordinates` | Privacy / QR | **PASSED** |
+| 34 | `Verifies configurable duration presets include required choices (15m, 1h, 8h)` | UX / Expiration | **PASSED** |
 
 ---
 

@@ -59,11 +59,13 @@ export async function socketAuthMiddleware(
       }
     } else {
       // Role: viewer
-      if (session.settings.requirePasscode && session.viewerTokenHash) {
-        if (!token || typeof token !== 'string') {
-          return next(new Error('UNAUTHORIZED_TOKEN: Protected session requires verification token'));
-        }
+      // Session ID alone does NOT authorize access to WebSocket broadcasts!
+      // Viewer MUST supply a valid capability token matching viewerTokenHash
+      if (!token || typeof token !== 'string') {
+        return next(new Error('UNAUTHORIZED_TOKEN: Viewer capability token is required'));
+      }
 
+      if (session.viewerTokenHash) {
         const isValidViewer = CryptoService.verifyToken(token, session.viewerTokenHash);
         if (!isValidViewer) {
           return next(new Error('UNAUTHORIZED_TOKEN: Invalid viewer capability token'));
