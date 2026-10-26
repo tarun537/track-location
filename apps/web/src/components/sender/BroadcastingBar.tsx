@@ -1,4 +1,4 @@
-import { Radio, Users, Target, Clock, ShieldAlert, Share2, Sun } from 'lucide-react';
+import { Radio, Users, Target, Clock, ShieldAlert, Share2, Sun, Moon } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
@@ -6,7 +6,9 @@ export interface BroadcastingBarProps {
   viewerCount: number;
   accuracyMeters?: number | null;
   formattedTimeRemaining: string;
+  percentageRemaining?: number;
   isWakeLockActive?: boolean;
+  onToggleWakeLock?: () => void;
   onOpenShareModal: () => void;
   onRequestStopSharing: () => void;
 }
@@ -15,15 +17,39 @@ export function BroadcastingBar({
   viewerCount,
   accuracyMeters,
   formattedTimeRemaining,
+  percentageRemaining = 100,
   isWakeLockActive,
+  onToggleWakeLock,
   onOpenShareModal,
   onRequestStopSharing,
 }: BroadcastingBarProps) {
+  // Dynamic color shift for countdown timer: Green -> Amber -> Red
+  const getTimerStyles = () => {
+    if (percentageRemaining <= 10) {
+      return {
+        badge: 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900 animate-pulse',
+        icon: 'text-red-600',
+      };
+    }
+    if (percentageRemaining <= 30) {
+      return {
+        badge: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200 dark:border-amber-900',
+        icon: 'text-amber-600',
+      };
+    }
+    return {
+      badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900',
+      icon: 'text-emerald-600',
+    };
+  };
+
+  const timerStyles = getTimerStyles();
+
   return (
     <div className="w-full rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 transition-all">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Live Status and Metrics */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           {/* Pulsing Live Badge */}
           <Badge className="bg-red-600 text-white gap-1.5 px-3 py-1 shadow-sm shadow-red-500/20 font-semibold tracking-wider text-xs">
             <span className="relative flex h-2 w-2">
@@ -43,23 +69,31 @@ export function BroadcastingBar({
           {/* GPS Accuracy Badge */}
           {accuracyMeters != null && (
             <div className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-              <Target className="h-3.5 w-3.5 text-emerald-600" />
-              <span>±{Math.round(accuracyMeters)}m accuracy</span>
+              <Target className="h-3.5 w-3.5 text-blue-600" />
+              <span>±{Math.round(accuracyMeters)}m</span>
             </div>
           )}
 
-          {/* Countdown Timer */}
-          <div className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-mono font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-            <Clock className="h-3.5 w-3.5 text-amber-600" />
-            <span>{formattedTimeRemaining} left</span>
+          {/* Countdown Timer with Visual Color Shift */}
+          <div className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-mono font-medium transition-colors ${timerStyles.badge}`}>
+            <Clock className={`h-3.5 w-3.5 ${timerStyles.icon}`} />
+            <span>{formattedTimeRemaining}</span>
           </div>
 
-          {/* Wake Lock Indicator */}
-          {isWakeLockActive && (
-            <div className="hidden md:flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-              <Sun className="h-3 w-3" />
-              <span>Screen On</span>
-            </div>
+          {/* Wake Lock Interactive Toggle */}
+          {onToggleWakeLock && (
+            <button
+              onClick={onToggleWakeLock}
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                isWakeLockActive
+                  ? 'bg-amber-100/80 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+              }`}
+              title={isWakeLockActive ? 'Screen kept awake (Click to disable)' : 'Screen may sleep (Click to keep awake)'}
+            >
+              {isWakeLockActive ? <Sun className="h-3.5 w-3.5 text-amber-600 animate-spin" /> : <Moon className="h-3.5 w-3.5" />}
+              <span>{isWakeLockActive ? 'Awake' : 'Dim OK'}</span>
+            </button>
           )}
         </div>
 

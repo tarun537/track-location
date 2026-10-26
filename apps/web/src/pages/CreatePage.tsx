@@ -63,7 +63,7 @@ export function CreatePage() {
   const { isLocked: isWakeLockActive, requestLock, releaseLock } = useWakeLock();
 
   // Session Countdown
-  const { formattedTime: timeRemaining, isExpired } = useSessionCountdown(
+  const { formattedTime: timeRemaining, percentageRemaining, isExpired } = useSessionCountdown(
     activeSession?.expiresAt,
     activeSession?.durationMinutes || durationMinutes,
     () => {
@@ -218,7 +218,9 @@ export function CreatePage() {
             viewerCount={viewerCount}
             accuracyMeters={coordinates?.accuracy}
             formattedTimeRemaining={timeRemaining}
+            percentageRemaining={percentageRemaining}
             isWakeLockActive={isWakeLockActive}
+            onToggleWakeLock={() => (isWakeLockActive ? releaseLock() : requestLock())}
             onOpenShareModal={() => setIsShareModalOpen(true)}
             onRequestStopSharing={() => setIsKillSwitchModalOpen(true)}
           />

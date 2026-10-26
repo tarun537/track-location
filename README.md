@@ -22,8 +22,20 @@ Complete architectural blueprints, data models, API contracts, security audits, 
    RESTful endpoint documentation, request/response JSON payloads, Socket.IO real-time event contracts, and complete Zod validation schemas.
 6. [**Security & Privacy Requirements** (`docs/SECURITY_REQUIREMENTS.md`)](./docs/SECURITY_REQUIREMENTS.md)  
    STRIDE threat modeling, token entropy and hashing, URL hash fragment hygiene, address bar secret stripping, Pino coordinate redaction, and HTTP security headers.
-7. [**Development Roadmap** (`docs/DEVELOPMENT_ROADMAP.md`)](./docs/DEVELOPMENT_ROADMAP.md)  
-   Sequential eight-phase milestone execution plan, task breakdown, risk mitigation matrix, and production Definition of Done (DoD).
+7. [**Security Audit Report** (`docs/SECURITY_AUDIT.md`)](./docs/SECURITY_AUDIT.md)  
+   Comprehensive full-stack security evaluation: zero critical/high findings, constant-time verification, rate limit audits, and sanitization proofs.
+8. [**Privacy Review & Consent Architecture** (`docs/PRIVACY_REVIEW.md`)](./docs/PRIVACY_REVIEW.md)  
+   Consent-first workflows, GDPR/CCPA compliance analysis, recipient zero-tracking guarantee, and data eradication matrices.
+9. [**Test Report & Verification Matrix** (`docs/TEST_REPORT.md`)](./docs/TEST_REPORT.md)  
+   Complete test run results: 24/24 passing unit, integration, and WebSocket tests with edge-case and race-condition coverage.
+10. [**Known Limitations & Mobile Geolocation Constraints** (`docs/KNOWN_LIMITATIONS.md`)](./docs/KNOWN_LIMITATIONS.md)  
+    Transparent analysis of iOS WebKit and Android background execution throttling, Wake Lock mitigations, and GPS accuracy physics.
+11. [**Production Readiness Review** (`docs/PRODUCTION_READINESS.md`)](./docs/PRODUCTION_READINESS.md)  
+    Definition of Done verification, performance metrics, horizontal scaling recommendations, and operational runbook.
+12. [**Production Deployment Guide** (`docs/DEPLOYMENT.md`)](./docs/DEPLOYMENT.md)  
+    Step-by-step instructions for Vercel (Frontend), Render (Backend WebSockets), and MongoDB Atlas.
+13. [**Development Roadmap** (`docs/DEVELOPMENT_ROADMAP.md`)](./docs/DEVELOPMENT_ROADMAP.md)  
+    Sequential eight-phase milestone execution plan, task breakdown, risk mitigation matrix, and production Definition of Done (DoD).
 
 ---
 

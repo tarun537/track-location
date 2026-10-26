@@ -1,4 +1,5 @@
-import { Activity, Gauge, Compass, Clock, Wifi, WifiOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, Gauge, Compass, Clock, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { ILocationSnapshot } from '@/types/location.types';
 import { formatRelativeTime, headingToCardinal, formatSpeedKmH } from '@/lib/geoMath';
 
@@ -17,6 +18,26 @@ export function ViewerStatusCard({
 }: ViewerStatusCardProps) {
   const isStale = status === 'disconnected_stale';
   const isPaused = status === 'paused';
+
+  // Check if latest location coordinate timestamp is older than 30 seconds
+  const [isOlderThan30s, setIsOlderThan30s] = useState(false);
+
+  useEffect(() => {
+    if (!location?.timestamp) {
+      setIsOlderThan30s(false);
+      return;
+    }
+
+    const checkStaleness = () => {
+      const updateTime = new Date(location.timestamp).getTime();
+      const elapsed = Date.now() - updateTime;
+      setIsOlderThan30s(elapsed > 30000);
+    };
+
+    checkStaleness();
+    const interval = setInterval(checkStaleness, 5000);
+    return () => clearInterval(interval);
+  }, [location?.timestamp]);
 
   return (
     <div className="absolute top-4 left-4 right-4 sm:left-6 sm:w-80 sm:right-auto z-[1000] rounded-2xl border border-gray-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md dark:border-gray-800 dark:bg-gray-900/95 transition-all">
@@ -100,6 +121,14 @@ export function ViewerStatusCard({
       ) : (
         <div className="py-4 text-center text-xs text-gray-500">
           Waiting for sender GPS coordinate...
+        </div>
+      )}
+
+      {/* Stale Location Warning (>30 seconds) */}
+      {isOlderThan30s && status === 'active' && (
+        <div className="mt-2.5 flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>Location not updated in &gt;30s (weak GPS or device asleep)</span>
         </div>
       )}
 

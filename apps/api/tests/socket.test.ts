@@ -210,4 +210,114 @@ describe('Real-Time Socket.IO Location Streaming & Authorization', () => {
     senderSocket.disconnect();
     viewerSocket.disconnect();
   });
+
+  it('rejects socket connection for non-existent session ID', async () => {
+    const socket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: {
+        role: 'viewer',
+        sessionId: 'nonexistent_session_id',
+      },
+      transports: ['websocket'],
+    });
+
+    const errorPromise = new Promise<Error>((resolve) => {
+      socket.on('connect_error', resolve);
+    });
+
+    const err = await errorPromise;
+    expect(err.message).toContain('SESSION_NOT_FOUND');
+    socket.disconnect();
+  });
+
+  it('rejects socket connection for revoked session', async () => {
+    const session = await SessionService.createSession({ durationMinutes: 30 });
+    const doc = await Session.findOne({ sessionId: session.sessionId });
+    if (doc) await SessionService.revokeSession(doc);
+
+    const socket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: {
+        role: 'viewer',
+        sessionId: session.sessionId,
+      },
+      transports: ['websocket'],
+    });
+
+    const errorPromise = new Promise<Error>((resolve) => {
+      socket.on('connect_error', resolve);
+    });
+
+    const err = await errorPromise;
+    expect(err.message).toContain('SESSION_REVOKED');
+    socket.disconnect();
+  });
+
+  it('rejects socket connection for expired session', async () => {
+    const session = await SessionService.createSession({ durationMinutes: 30 });
+    await Session.updateOne(
+      { sessionId: session.sessionId },
+      { expiresAt: new Date(Date.now() - 5000) }
+    );
+
+    const socket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: {
+        role: 'viewer',
+        sessionId: session.sessionId,
+      },
+      transports: ['websocket'],
+    });
+
+    const errorPromise = new Promise<Error>((resolve) => {
+      socket.on('connect_error', resolve);
+    });
+
+    const err = await errorPromise;
+    expect(err.message).toContain('SESSION_EXPIRED');
+    socket.disconnect();
+  });
+
+  it('rejects unauthorized viewer on passcode-protected session until verified', async () => {
+    const session = await SessionService.createSession({
+      durationMinutes: 30,
+      passcode: '5678',
+    });
+    const { sessionId, viewerToken } = session;
+
+    // 1. Viewer attempts connection with no token on protected session -> REJECTED
+    const noTokenSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId },
+      transports: ['websocket'],
+    });
+
+    const noTokenErrPromise = new Promise<Error>((resolve) => {
+      noTokenSocket.on('connect_error', resolve);
+    });
+
+    const err1 = await noTokenErrPromise;
+    expect(err1.message).toContain('UNAUTHORIZED_TOKEN');
+    noTokenSocket.disconnect();
+
+    // 2. Viewer attempts connection with forged token -> REJECTED
+    const badTokenSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId, token: 'vt_forged_viewer_token' },
+      transports: ['websocket'],
+    });
+
+    const badTokenErrPromise = new Promise<Error>((resolve) => {
+      badTokenSocket.on('connect_error', resolve);
+    });
+
+    const err2 = await badTokenErrPromise;
+    expect(err2.message).toContain('UNAUTHORIZED_TOKEN');
+    badTokenSocket.disconnect();
+
+    // 3. Viewer connects with genuine viewerToken -> ACCEPTED
+    const validSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId, token: viewerToken },
+      transports: ['websocket'],
+    });
+
+    await new Promise<void>((resolve) => validSocket.on('connect', resolve));
+    expect(validSocket.connected).toBe(true);
+    validSocket.disconnect();
+  });
 });

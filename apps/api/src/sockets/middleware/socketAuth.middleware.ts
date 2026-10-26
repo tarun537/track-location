@@ -36,7 +36,12 @@ export async function socketAuthMiddleware(
       return next(new Error('SESSION_NOT_FOUND: Sharing session not found'));
     }
 
-    // Server-enforced expiry and revocation check
+    // Server-enforced revocation check
+    if (session.status === 'revoked') {
+      return next(new Error('SESSION_REVOKED: Sharing session has been stopped by the sender'));
+    }
+
+    // Server-enforced expiry check
     if (session.isExpired()) {
       return next(new Error('SESSION_EXPIRED: Sharing session has ended or expired'));
     }
@@ -55,12 +60,13 @@ export async function socketAuthMiddleware(
     } else {
       // Role: viewer
       if (session.settings.requirePasscode && session.viewerTokenHash) {
-        // If session is protected and capability token provided, verify it
-        if (token && typeof token === 'string') {
-          const isValidViewer = CryptoService.verifyToken(token, session.viewerTokenHash);
-          if (!isValidViewer) {
-            return next(new Error('UNAUTHORIZED_TOKEN: Invalid viewer capability token'));
-          }
+        if (!token || typeof token !== 'string') {
+          return next(new Error('UNAUTHORIZED_TOKEN: Protected session requires verification token'));
+        }
+
+        const isValidViewer = CryptoService.verifyToken(token, session.viewerTokenHash);
+        if (!isValidViewer) {
+          return next(new Error('UNAUTHORIZED_TOKEN: Invalid viewer capability token'));
         }
       }
     }

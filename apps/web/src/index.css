@@ -55,6 +55,11 @@
   position: relative;
 }
 
+/* Smooth linear glide for Leaflet marker icon during live GPS updates */
+.leaflet-marker-icon {
+  transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
 .locato-pulse-ring {
   position: absolute;
   width: 44px;
