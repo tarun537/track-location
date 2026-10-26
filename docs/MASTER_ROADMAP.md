@@ -2,8 +2,8 @@
 
 > **Living Project Document**  
 > **Product Name:** Locato  
-> **Current Phase:** Phase 1 Completed — Ready for Phase 2 (Frontend)  
-> **Overall Status:** Phase 1 Complete (All Acceptance Criteria Verified)  
+> **Current Phase:** Phase 2 Completed — Ready for Phase 3 (Backend & Database)  
+> **Overall Status:** Phases 1 & 2 Complete (All Acceptance Criteria Verified)  
 > **Last Updated:** 2026-10-26  
 
 ---
@@ -46,7 +46,7 @@ locato/
 | Phase | Title | Focus & Core Deliverables | Status |
 | :---: | :--- | :--- | :---: |
 | **1** | **Planning & Architecture** | Complete specifications (`docs/`), repository state audit, session lifecycle, token architecture, browser limitations. | **COMPLETED** |
-| **2** | **Frontend** | React SPA (Landing, Create Session, Viewer Map, Error states, responsive layout, shadcn/ui). | PENDING |
+| **2** | **Frontend** | React SPA (Landing, Create Session, Viewer Map, Error states, responsive layout, shadcn/ui). | **COMPLETED** |
 | **3** | **Backend & Database** | Express API, MongoDB connection, Mongoose model with TTL, Zod validation, token hashing, rate limiters, unit/integration tests. | PENDING |
 | **4** | **Real-Time GPS** | Authenticated Socket.IO gateway, browser `watchPosition` engine, unidirectional broadcast, kill switch. | PENDING |
 | **5** | **Secure Links** | Unpredictable IDs, one-time secret exchange, address bar secret stripping, QR code, native share, unauthorized join tests. | PENDING |
@@ -99,6 +99,54 @@ locato/
 - **None currently.** All dependencies and architectural patterns are established and ready for Phase 2 scaffolding.
 
 ### 4.6 Next Steps
-- Conclude Phase 1 review with user.
-- Upon approval, proceed to **Phase 2 — Frontend**: scaffold `apps/web` (Vite, React, TypeScript, Tailwind CSS, shadcn/ui, Leaflet, Lucide React) and implement UI pages with typed mocks.
+- Phase 1 completed and verified.
+
+---
+
+## 5. Phase 2 Details: Frontend Implementation
+
+### 5.1 Objectives
+1. Build modern, responsive, mobile-first frontend in `apps/web`.
+2. Implement Landing page, Create-Session page, and Recipient Live Tracking page.
+3. Ensure no location collection before explicit user action.
+4. Strictly prevent recipient tracking on tracking views.
+5. Provide accessible loading, empty, stale, expired, and revoked states.
+6. Verify production build and automated tests pass cleanly.
+
+### 5.2 Work Completed in Phase 2
+- [x] Initialized `apps/web` with Vite, React 19, TypeScript, Tailwind CSS, and shadcn-style UI primitives.
+- [x] Built responsive UI primitives: `Button`, `Card`, `Badge`, `Dialog`, and `Input`.
+- [x] Built navigation & footer with privacy guarantees and OpenStreetMap attribution.
+- [x] Built interactive `LeafletMap` with animated live marker pin, directional heading arrow, accuracy circle, and recenter button.
+- [x] Implemented `useGeolocation` hook: strictly requires explicit `startTracking()` call; never captures on mount.
+- [x] Implemented `useWakeLock` hook: keeps mobile/desktop screen illuminated during active tracking.
+- [x] Implemented `useSessionCountdown` hook: calculates live countdown until expiry.
+- [x] Built `ConsentModal`: pre-permission dialog explaining privacy terms before browser GPS prompt.
+- [x] Built `ShareModal`: one-click copy, native Web Share API trigger, and dynamic QR code generation.
+- [x] Built `BroadcastingBar`: active broadcasting dashboard with kill switch and metrics.
+- [x] Built `KillSwitchDialog`: confirmation dialog before revoking access.
+- [x] Built `TrackPage`: recipient live tracking view with zero recipient GPS collection, address bar secret stripping, and real-time state listeners.
+- [x] Built state feedback cards: waiting, stale signal, session expired, session revoked, invalid 404, and PIN passcode dialog.
+- [x] Isolated mock data service (`mockSessionService.ts`) completely separated from production API client (`apiClient.ts`).
+
+### 5.3 Acceptance Criteria Verification (Phase 2)
+- [x] **All required pages render and navigate correctly:** Routes `/`, `/create`, `/v/:sessionId`, `/track/:sessionId`, and `*` tested.
+- [x] **Desktop and mobile layouts work:** Responsive Tailwind grid and flex layouts verified across breakpoints.
+- [x] **Permission is not requested on page load:** `useGeolocation` does not invoke `watchPosition` on mount.
+- [x] **Recipient page does not request recipient GPS:** `TrackPage` has zero calls to geolocation APIs.
+- [x] **UI states are implemented:** Loading, waiting, stale, expired, revoked, invalid, and passcode states complete.
+- [x] **Mocks are isolated from production services:** `mockSessionService.ts` strictly isolated for offline UI preview.
+- [x] **Build and relevant checks pass:**
+  - `oxlint`: 0 errors, 0 warnings.
+  - `tsc -b && vite build`: compiled in 1.86s, 0 errors.
+  - `vitest run`: 4/4 unit tests passing.
+
+### 5.4 Test & Build Results
+- **Unit Tests:** Vitest passed 4/4 tests (`geoMath.test.ts`).
+- **Linter:** Oxlint passed on 35 files with 0 warnings.
+- **Production Build:** Vite bundle generated in `apps/web/dist/` (CSS: 47.8 kB, JS: 562.4 kB).
+
+### 5.5 Next Phase
+- Proceed to **Phase 3 — Backend and Database**: Implement Express REST API, MongoDB connection, Mongoose model with TTL indexes, token hashing, rate limiters, and automated tests.
+
 
