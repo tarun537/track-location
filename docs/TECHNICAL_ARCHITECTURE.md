@@ -236,13 +236,51 @@ stateDiagram-v2
 
 ## 6. Real-Time Communication Architecture (Socket.IO)
 
-### 6.1 Room Multiplexing
+### 6.1 Handshake, Streaming & Revocation Lifecycle
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Sender as Sender Browser
+    participant Svr as Socket.IO Server
+    participant DB as MongoDB Atlas
+    actor Viewer as Recipient Browser
+
+    Note over Sender,DB: 1. Handshake & Room Join
+    Sender->>Svr: WSS Handshake (auth: { role: 'sender', sessionId, token })
+    Svr->>DB: Query Session & Verify senderTokenHash
+    DB-->>Svr: Session valid & active
+    Svr-->>Sender: Handshake Accepted (Joined room)
+
+    Viewer->>Svr: WSS Handshake (auth: { role: 'viewer', sessionId, token })
+    Svr->>DB: Query Session & Verify viewerTokenHash
+    DB-->>Svr: Session valid
+    Svr-->>Viewer: Handshake Accepted (Joined room)
+    Svr->>Sender: Event: session:viewer_count (count: 1)
+
+    Note over Sender,Viewer: 2. Real-Time GPS Streaming
+    loop Periodic GPS Watcher
+        Sender->>Svr: Event: sender:location_update { lat, lng, acc, speed, heading, ts }
+        Svr->>Svr: Validate Payload (Zod) & Rate Check (<2/sec)
+        Svr->>DB: Update lastLocation & stats (Overwrite single slot)
+        Svr->>Viewer: Event: session:location_broadcast { lat, lng, acc, speed, heading, ts }
+    end
+
+    Note over Sender,Viewer: 3. Instant Revocation (Kill Switch)
+    Sender->>Svr: Event: sender:terminate
+    Svr->>DB: Update status='revoked', UNSET lastLocation
+    Svr->>Viewer: Event: session:status_changed { status: 'revoked' }
+    Svr->>Viewer: Disconnect Socket
+    Svr->>Sender: Disconnect Socket
+```
+
+### 6.2 Room Multiplexing
 Each sharing session maps to an isolated room: `session:${sessionId}`.
 - Senders join the room upon successful handshake with `role: 'sender'` and valid `senderToken`.
 - Viewers join the room upon handshake with `role: 'viewer'` and valid `viewerToken`.
 - Coordinate updates emitted by the sender are broadcast solely to room viewers via `session:location_broadcast`.
 
-### 6.2 Disconnect Grace Period
+### 6.3 Disconnect Grace Period
 Mobile users in transit frequently encounter cell tower handovers or subway tunnels:
 - When a sender socket disconnects, the server does **not** instantly terminate the session.
 - A **60-second Grace Timer** starts. Viewers receive `session:sender_disconnected` `{ gracePeriodSeconds: 60 }`.

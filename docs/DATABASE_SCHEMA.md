@@ -34,7 +34,7 @@ erDiagram
         string sessionId UK "Unique, unguessable ID"
         string senderTokenHash "SHA-256 hash of sender management token"
         string viewerTokenHash "SHA-256 hash of viewer capability token"
-        string status "created | active | disconnected_stale | paused | revoked | expired"
+        string status "created, active, disconnected_stale, paused, revoked, expired"
         string title "Optional user label (sanitized)"
         int durationMinutes "Allocated lifetime"
         date expiresAt "TTL index key"
@@ -48,7 +48,7 @@ erDiagram
     SESSION_AUDIT {
         ObjectId _id PK
         string sessionId "Reference to session ID"
-        string eventType "created | revoked | expired | rate_limited | auth_failed"
+        string eventType "created, revoked, expired, rate_limited, auth_failed"
         string anonymizedIpHash "Salted SHA-256 hash of IP"
         string userAgent "Client user agent header"
         date createdAt "TTL index key (7 days retention)"
