@@ -34,6 +34,8 @@ class ApiClient {
         `HTTP Error ${response.status}: ${response.statusText}`;
       const error = new Error(errorMessage);
       (error as unknown as { code?: string; statusCode?: number }).statusCode = response.status;
+      (error as unknown as { code?: string; statusCode?: number }).code =
+        (!data.success && data.error?.code) || undefined;
       throw error;
     }
 

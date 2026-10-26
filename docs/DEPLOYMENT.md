@@ -147,3 +147,4 @@ Deploy the project. Vercel will build the frontend and provide your live URL (e.
    - Click "Stop Sharing" on Phone A.
    - Confirm Phone B immediately displays "Session Ended" state card within 500ms.
    - Verify coordinates are purged from database.
+

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, Share2, QrCode } from 'lucide-react';
+import { Copy, Check, Share2, QrCode, AlertCircle } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 
@@ -13,29 +13,44 @@ export interface ShareModalProps {
 
 export function ShareModal({ isOpen, onClose, shareUrl, expiresAt }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        setCopyFailed(false);
+        setTimeout(() => setCopied(false), 2500);
+      } else {
+        throw new Error('Clipboard API unavailable');
+      }
     } catch {
-      // Fallback
-      setCopied(false);
+      // Fallback for non-secure contexts or permission denied: select text for manual copy
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 4000);
     }
   };
 
   const handleNativeShare = async () => {
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
           title: 'My Live Location on Locato',
           text: 'Follow my live location in real time on Locato:',
           url: shareUrl,
         });
-      } catch {
-        // User cancelled share
+      } catch (err: unknown) {
+        // Only fallback to copy if it wasn't an intentional user abort
+        if ((err as Error)?.name !== 'AbortError') {
+          handleCopy();
+        }
       }
     } else {
       handleCopy();
@@ -53,6 +68,7 @@ export function ShareModal({ isOpen, onClose, shareUrl, expiresAt }: ShareModalP
         {/* Link Input & Copy */}
         <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-50/70 p-2 dark:border-gray-800 dark:bg-gray-800/60">
           <input
+            ref={inputRef}
             type="text"
             readOnly
             value={shareUrl}
@@ -79,6 +95,14 @@ export function ShareModal({ isOpen, onClose, shareUrl, expiresAt }: ShareModalP
           </Button>
         </div>
 
+        {/* Copy Failure Graceful Warning */}
+        {copyFailed && (
+          <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span>Clipboard blocked. Link selected—press Ctrl+C / Cmd+C to copy.</span>
+          </div>
+        )}
+
         {/* Action Buttons: Native Share & Toggle QR */}
         <div className="flex gap-2">
           {typeof navigator !== 'undefined' && 'share' in navigator && (
@@ -102,7 +126,7 @@ export function ShareModal({ isOpen, onClose, shareUrl, expiresAt }: ShareModalP
           </Button>
         </div>
 
-        {/* QR Code Container */}
+        {/* QR Code Container (Contains ONLY the authorized share URL, zero location info) */}
         {showQr && (
           <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-gray-100 dark:bg-gray-800 dark:border-gray-700 animate-in fade-in">
             <div className="p-3 bg-white rounded-lg shadow-sm">

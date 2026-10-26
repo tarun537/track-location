@@ -83,3 +83,4 @@ In many peer-to-peer tracking applications, recipients are inadvertently tracked
 1. `apps/web/src/pages/TrackPage.tsx` contains no geolocation hooks or queries.
 2. The recipient can observe the sender anonymously without creating an account or logging in.
 3. OpenStreetMap tile requests are routed with `Referrer-Policy: no-referrer` to prevent tile servers from observing recipient viewing sessions.
+

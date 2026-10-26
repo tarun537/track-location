@@ -59,3 +59,4 @@ Locato addresses these mobile constraints transparently and safely:
   - Clear attribution is embedded in Leaflet.
   - Tile requests do not pass user tokens or identifiers.
   - For high-volume enterprise deployments, we recommend switching to a dedicated vector tile provider (such as Mapbox, Stadia Maps, or self-hosted OpenMapTiles) as documented in `docs/DEPLOYMENT.md`.
+

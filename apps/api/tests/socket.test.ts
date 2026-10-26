@@ -320,4 +320,78 @@ describe('Real-Time Socket.IO Location Streaming & Authorization', () => {
     expect(validSocket.connected).toBe(true);
     validSocket.disconnect();
   });
+
+  it('permits repeated credential use for multiple authorized concurrent viewers', async () => {
+    const session = await SessionService.createSession({ durationMinutes: 30 });
+    const { sessionId, senderToken, viewerToken } = session;
+
+    const senderSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'sender', sessionId, token: senderToken },
+      transports: ['websocket'],
+    });
+
+    // Two independent viewers using the same valid capability credential
+    const viewer1: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId, token: viewerToken },
+      transports: ['websocket'],
+    });
+
+    const viewer2: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId, token: viewerToken },
+      transports: ['websocket'],
+    });
+
+    await Promise.all([
+      new Promise<void>((resolve) => senderSocket.on('connect', resolve)),
+      new Promise<void>((resolve) => viewer1.on('connect', resolve)),
+      new Promise<void>((resolve) => viewer2.on('connect', resolve)),
+    ]);
+
+    expect(viewer1.connected).toBe(true);
+    expect(viewer2.connected).toBe(true);
+
+    const v1Promise = new Promise<{ latitude: number }>((resolve) =>
+      viewer1.once('session:location_broadcast', resolve)
+    );
+    const v2Promise = new Promise<{ latitude: number }>((resolve) =>
+      viewer2.once('session:location_broadcast', resolve)
+    );
+
+    senderSocket.emit('sender:location_update', {
+      latitude: 48.8566,
+      longitude: 2.3522,
+      accuracy: 8,
+    });
+
+    const [v1Coords, v2Coords] = await Promise.all([v1Promise, v2Promise]);
+    expect(v1Coords.latitude).toBe(48.8566);
+    expect(v2Coords.latitude).toBe(48.8566);
+
+    senderSocket.disconnect();
+    viewer1.disconnect();
+    viewer2.disconnect();
+  });
+
+  it('strictly denies repeated credential access after session revocation', async () => {
+    const session = await SessionService.createSession({ durationMinutes: 30 });
+    const { sessionId, viewerToken } = session;
+
+    // First, sender revokes session
+    const doc = await Session.findOne({ sessionId });
+    if (doc) await SessionService.revokeSession(doc);
+
+    // Attempting to reuse the previously-valid viewerToken must be rejected
+    const reusedSocket: ClientSocket = Client(`http://localhost:${port}`, {
+      auth: { role: 'viewer', sessionId, token: viewerToken },
+      transports: ['websocket'],
+    });
+
+    const errPromise = new Promise<Error>((resolve) => {
+      reusedSocket.on('connect_error', resolve);
+    });
+
+    const err = await errPromise;
+    expect(err.message).toContain('SESSION_REVOKED');
+    reusedSocket.disconnect();
+  });
 });

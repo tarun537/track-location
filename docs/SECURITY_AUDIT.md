@@ -178,3 +178,4 @@ The entire automated test suite validates these security controls:
 - **`tests/socket.test.ts` (8 tests):** Handshake authentication, invalid token rejection, non-existent session rejection, expired/revoked session blocking, viewer coordinate injection blocking, protected PIN token enforcement, instant kill-switch room broadcast.
 
 **Final Audit Verdict: APPROVED FOR PRODUCTION**
+

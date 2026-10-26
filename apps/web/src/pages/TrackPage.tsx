@@ -86,8 +86,10 @@ export function TrackPage() {
         }
       } catch (err: unknown) {
         if (!isMounted) return;
-        const statusCode = (err as { statusCode?: number })?.statusCode;
-        if (statusCode === 410) {
+        const errObj = err as { statusCode?: number; code?: string };
+        if (errObj.code === 'SESSION_REVOKED') {
+          setErrorStatus('revoked');
+        } else if (errObj.statusCode === 410 || errObj.code === 'SESSION_EXPIRED') {
           setErrorStatus('expired');
         } else {
           setErrorStatus('404');

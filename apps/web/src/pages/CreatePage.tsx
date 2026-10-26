@@ -23,11 +23,11 @@ import { createSenderSocket, LocatoSocket } from '@/services/socketClient';
 import { SessionCreatedResult } from '@/types/session.types';
 
 const DURATION_PRESETS = [
-  { label: '5 min', value: 5 },
   { label: '15 min', value: 15 },
   { label: '30 min', value: 30 },
   { label: '1 hour', value: 60 },
   { label: '4 hours', value: 240 },
+  { label: '8 hours', value: 480 },
 ];
 
 export function CreatePage() {

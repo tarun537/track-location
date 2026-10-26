@@ -3,7 +3,7 @@
 > **Product Name:** Locato  
 > **Report Date:** 2026-10-26  
 > **Test Frameworks:** Vitest 3.x (Node/Backend), Vitest 5.x (React/Frontend), Supertest, MongoDB Memory Server, Socket.IO Client  
-> **Overall Test Status:** 24 / 24 Tests Passing (100% Pass Rate)  
+> **Overall Test Status:** 31 / 31 Tests Passing (100% Pass Rate)  
 
 ---
 
@@ -13,11 +13,12 @@
 ========================================================================================
 Test Suite                                  Status     Tests    Passed   Failed   Time
 ========================================================================================
-apps/api/tests/session.test.ts              PASSED        12        12        0  1.35s
-apps/api/tests/socket.test.ts               PASSED         8         8        0  1.12s
-apps/web/src/tests/geoMath.test.ts          PASSED         4         4        0  0.21s
+apps/api/tests/session.test.ts              PASSED        12        12        0  1.29s
+apps/api/tests/socket.test.ts               PASSED        10        10        0  2.90s
+apps/web/src/tests/geoMath.test.ts          PASSED         4         4        0  0.01s
+apps/web/src/tests/secureLinks.test.ts      PASSED         5         5        0  0.01s
 ----------------------------------------------------------------------------------------
-Total Automated Tests Passed                PASSED        24        24        0  2.68s
+Total Automated Tests Passed                PASSED        31        31        0  4.21s
 ========================================================================================
 ```
 
@@ -54,15 +55,27 @@ Total Automated Tests Passed                PASSED        24        24        0 
 | 18 | `Rejects socket connection for revoked session (SESSION_REVOKED)` | Security / Auth | **PASSED** |
 | 19 | `Rejects socket connection for expired session (SESSION_EXPIRED)` | Lifecycle / Expiry | **PASSED** |
 | 20 | `Rejects unauthorized viewer on passcode-protected session until verified` | Protected Sessions | **PASSED** |
+| 21 | `Permits repeated credential use for multiple authorized concurrent viewers` | Multi-Viewer | **PASSED** |
+| 22 | `Strictly denies repeated credential access after session revocation` | Security / Revocation | **PASSED** |
 
 ### 2.3 Frontend Geolocation Mathematics & Formatting (`apps/web/src/tests/geoMath.test.ts`)
 
 | # | Test Description | Category | Result |
 | :---: | :--- | :--- | :---: |
-| 21 | `Formats relative time stamps accurately (just now, Xs ago, Xm ago)` | Math / Time | **PASSED** |
-| 22 | `Converts degree headings to cardinal directions (N, NE, E, SE, S, SW, W, NW)` | Geodesy | **PASSED** |
-| 23 | `Formats GPS speed in m/s to clean km/h display` | Formatting | **PASSED** |
-| 24 | `Calculates Haversine distance between two coordinates in meters` | Geodesy | **PASSED** |
+| 23 | `Formats relative time stamps accurately (just now, Xs ago, Xm ago)` | Math / Time | **PASSED** |
+| 24 | `Converts degree headings to cardinal directions (N, NE, E, SE, S, SW, W, NW)` | Geodesy | **PASSED** |
+| 25 | `Formats GPS speed in m/s to clean km/h display` | Formatting | **PASSED** |
+| 26 | `Calculates Haversine distance between two coordinates in meters` | Geodesy | **PASSED** |
+
+### 2.4 Secure Links & Credential Hygiene (`apps/web/src/tests/secureLinks.test.ts`)
+
+| # | Test Description | Category | Result |
+| :---: | :--- | :--- | :---: |
+| 27 | `Safely extracts viewer capability key from URL hash fragment` | RFC 3986 Hash | **PASSED** |
+| 28 | `Handles malformed or missing hash key gracefully without throwing` | Robustness | **PASSED** |
+| 29 | `Generates clean sanitized URL for address bar stripping (replaceState)` | Address Bar Hygiene | **PASSED** |
+| 30 | `Ensures QR code payload strictly contains canonical share URL without location coordinates` | Privacy / QR | **PASSED** |
+| 31 | `Verifies configurable duration presets include required choices (15m, 1h, 8h)` | UX / Expiration | **PASSED** |
 
 ---
 
@@ -106,3 +119,4 @@ Oxlint / Linter                             oxlint src            0 Errors     C
    - In `< 150ms`, viewer map shifts to "Session Ended" state card.
    - Backend database coordinates are wiped via `$unset: { lastLocation: 1 }`.
    - Verification complete.
+

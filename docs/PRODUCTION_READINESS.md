@@ -70,3 +70,4 @@ The backend handles `SIGTERM` and `SIGINT` cleanly:
 2. Waits for active database write queries to resolve.
 3. Closes MongoDB connection pool.
 4. Exits process with code 0 within 5 seconds.
+
