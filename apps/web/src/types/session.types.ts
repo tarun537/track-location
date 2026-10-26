@@ -35,3 +35,4 @@ export interface SessionPublicMetadata {
   viewerCount: number;
   lastLocation?: ILocationSnapshot | null;
 }
+

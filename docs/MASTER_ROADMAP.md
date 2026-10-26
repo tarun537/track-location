@@ -2,8 +2,8 @@
 
 > **Living Project Document**  
 > **Product Name:** Locato  
-> **Current Phase:** Phase 2 Completed — Ready for Phase 3 (Backend & Database)  
-> **Overall Status:** Phases 1 & 2 Complete (All Acceptance Criteria Verified)  
+> **Current Phase:** Phase 3 Completed — Ready for Phase 4 (Real-Time GPS)  
+> **Overall Status:** Phases 1, 2 & 3 Complete (All Acceptance Criteria Verified)  
 > **Last Updated:** 2026-10-26  
 
 ---
@@ -47,7 +47,7 @@ locato/
 | :---: | :--- | :--- | :---: |
 | **1** | **Planning & Architecture** | Complete specifications (`docs/`), repository state audit, session lifecycle, token architecture, browser limitations. | **COMPLETED** |
 | **2** | **Frontend** | React SPA (Landing, Create Session, Viewer Map, Error states, responsive layout, shadcn/ui). | **COMPLETED** |
-| **3** | **Backend & Database** | Express API, MongoDB connection, Mongoose model with TTL, Zod validation, token hashing, rate limiters, unit/integration tests. | PENDING |
+| **3** | **Backend & Database** | Express API, MongoDB connection, Mongoose model with TTL, Zod validation, token hashing, rate limiters, unit/integration tests. | **COMPLETED** |
 | **4** | **Real-Time GPS** | Authenticated Socket.IO gateway, browser `watchPosition` engine, unidirectional broadcast, kill switch. | PENDING |
 | **5** | **Secure Links** | Unpredictable IDs, one-time secret exchange, address bar secret stripping, QR code, native share, unauthorized join tests. | PENDING |
 | **6** | **Product Polish** | Dynamic accuracy circle, marker animation, stale-location indicators, countdown, mobile UX, honest PWA limits. | PENDING |
@@ -147,6 +147,72 @@ locato/
 - **Production Build:** Vite bundle generated in `apps/web/dist/` (CSS: 47.8 kB, JS: 562.4 kB).
 
 ### 5.5 Next Phase
-- Proceed to **Phase 3 — Backend and Database**: Implement Express REST API, MongoDB connection, Mongoose model with TTL indexes, token hashing, rate limiters, and automated tests.
+- Phase 2 completed and verified.
+
+---
+
+## 6. Phase 3 Details: Backend, Database & Session Management
+
+### 6.1 Objectives
+1. Implement Express REST API, MongoDB connection, Mongoose model, Zod validation, token hashing, and error handling in `apps/api`.
+2. Define minimal session schema with single latest coordinate slot and zero permanent location history.
+3. Enforce separate sender authorization (`Bearer <senderToken>`) and recipient capability authorization.
+4. Implement SHA-256 token hashing; never store raw secrets.
+5. Double-enforce expiry and revocation on every request.
+6. Provide rate limiting, strict CORS, security headers, request validation, safe error messages, and secret-free logs.
+7. Deliver automated integration test suite.
+
+### 6.2 Work Completed in Phase 3
+- [x] Initialized `apps/api` with TypeScript 5.7, Express 4, Mongoose 8, Zod, Helmet, CORS, and Pino.
+- [x] Created `apps/api/.env.example` with safe placeholder variables.
+- [x] Configured Zod environment validator (`src/config/environment.ts`).
+- [x] Implemented Mongoose database connector with retry logic and pooling (`src/config/database.ts`).
+- [x] Implemented `Session` model (`src/models/session.model.ts`) with:
+  - Unique index on `sessionId`
+  - Index on `senderTokenHash`
+  - Native MongoDB TTL index on `expiresAt` (`expireAfterSeconds: 0`)
+  - Subdocument `lastLocation` with 6-decimal geodetic truncation
+  - Instant `$unset: { lastLocation: 1 }` on revocation
+- [x] Implemented `CryptoService` (`src/services/crypto.service.ts`):
+  - 128-bit unguessable base64url session IDs
+  - 256-bit sender management tokens
+  - 128-bit viewer capability tokens
+  - SHA-256 token and passcode hashing with server pepper
+  - Timing-safe hash comparison (`crypto.timingSafeEqual`)
+- [x] Implemented Express middleware:
+  - `auth.middleware.ts` (separate sender Bearer token vs recipient capability key)
+  - `rateLimiter.middleware.ts` (session creation 5/min, passcode verify 5/15min, API limiter 120/min)
+  - `validate.middleware.ts` (Zod body and param validation)
+  - `error.middleware.ts` (centralized, sanitized error envelopes)
+- [x] Implemented `SessionService` & REST Controllers:
+  - `POST /api/sessions` (Create session, returns unhashed tokens once)
+  - `GET /api/sessions/:sessionId` (Get metadata; omits coordinates if passcode locked)
+  - `POST /api/sessions/:sessionId/authorize` (Verify numeric PIN)
+  - `POST /api/sessions/:sessionId/revoke` (Kill switch, unsets coordinates immediately)
+  - `POST /api/sessions/:sessionId/pause` & `/resume`
+  - `PATCH /api/sessions/:sessionId/extend`
+  - `GET /api/health` (Healthcheck)
+  - Dual mounting at `/api` and `/api/v1`.
+- [x] Implemented comprehensive integration test suite (`tests/session.test.ts`) using `mongodb-memory-server` and `supertest`.
+
+### 6.3 Acceptance Criteria Verification (Phase 3)
+- [x] **Backend starts:** Server bootstraps with database connection, graceful shutdown (`SIGTERM`/`SIGINT`), and port binding.
+- [x] **Database connection works when configured:** Mongoose connection pooling and retry handlers verified.
+- [x] **Session APIs behave as documented:** Verified via 12 automated integration tests.
+- [x] **Unauthorized access is rejected:** Missing/invalid Bearer tokens return 401; wrong passcode returns 401.
+- [x] **Expiry and revocation are server-enforced:** Revoked sessions immediately purge coordinates and reject requests with 410; expired sessions return 410.
+- [x] **Tests pass and configuration is documented:**
+  - `npm run test:api`: 12/12 tests passing.
+  - `npm run build:api`: `tsc` compiles with 0 errors.
+  - Full workspace test suite: 16/16 tests passing (4 frontend, 12 backend).
+
+### 6.4 Test & Build Results
+- **Backend Tests:** 12/12 integration tests passed in 1.25s ([tests/session.test.ts](file:///c:/Users/Dell/OneDrive/Desktop/sam/Projects/we-safe/apps/api/tests/session.test.ts)).
+- **Backend Build:** TypeScript compilation (`tsc`) passed with 0 errors into `apps/api/dist/`.
+- **Full Workspace Test Suite:** 16/16 passing across `apps/web` and `apps/api`.
+
+### 6.5 Next Phase
+- Proceed to **Phase 4 — Real-Time GPS**: Connect frontend and backend via authenticated Socket.IO for live coordinate streaming with zero recipient tracking, leaky-bucket rate limiting, and instant kill switch broadcast.
+
 
 

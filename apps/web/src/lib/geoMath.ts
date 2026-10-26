@@ -55,3 +55,4 @@ export function formatSpeedKmH(speedMps?: number | null): string {
   const kmh = speedMps * 3.6;
   return `${kmh.toFixed(1)} km/h`;
 }
+

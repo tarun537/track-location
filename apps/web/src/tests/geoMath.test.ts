@@ -41,3 +41,4 @@ describe('geoMath utility module', () => {
     expect(formatSpeedKmH(undefined)).toBe('0.0 km/h');
   });
 });
+

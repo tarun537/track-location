@@ -147,3 +147,4 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
     stopTracking,
   };
 }
+

@@ -54,3 +54,4 @@ export function createViewerSocket(sessionId: string, viewerToken?: string | nul
     reconnectionDelay: 1000,
   });
 }
+
